@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://cnation-tcad.vercel.app"),
   title: "BG Cell Implant Simulator",
   description: "Implant 조건을 입력하고 기준 공정 대비 dose profile, refresh, cell transistor leakage 경향을 비교하는 간이 시뮬레이터입니다.",
   openGraph: {

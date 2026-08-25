@@ -31,18 +31,9 @@ npm run dev
 npm run build
 ```
 
-## GitHub 업로드
+## 배포
 
-```bash
-git init
-git add .
-git commit -m "Initial commit: BG Cell Implant Simulator"
-git branch -M main
-git remote add origin https://github.com/USERNAME/REPOSITORY.git
-git push -u origin main
-```
-
-`USERNAME`과 `REPOSITORY`는 본인의 GitHub 계정 및 저장소 이름으로 변경합니다.
+표준 Next.js 앱이므로 Vercel에서 이 저장소(`civilizednation/cnation-tcad`)를 그대로 Import하면 별도 설정 없이 빌드/배포됩니다 (Build Command: `next build`, Output: `.next`).
 
 ## 주요 파일
 
