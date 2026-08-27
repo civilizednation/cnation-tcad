@@ -187,10 +187,7 @@ export default function Home() {
   const [appliedConditions,setAppliedConditions]=useState<ActiveImplant[][]>([[{source:"Boron",energy:80,dose:2.3e13}]]);
   const [error,setError]=useState("");
   const results=useMemo(()=>appliedConditions.map(analyze),[appliedConditions]);
-  const applied=appliedConditions[0];
-  const result=results[0];
   const baselineSummary=conditionSummary(BASELINE);
-  const currentSummary=conditionSummary(applied);
   const update=(setter:(value:Implant)=>void,current:Implant,key:keyof Implant,value:string)=>setter({...current,[key]:value});
   const updateExtra=(id:number,key:keyof Implant,value:string)=>setExtraConditions(prev=>prev.map(c=>c.id===id?{...c,[key]:value}:c));
   const addCondition=()=>{ if(1+extraConditions.length>=MAX_CONDITIONS){setLimitNotice(`실험 조건은 최대 ${MAX_CONDITIONS}개까지 추가할 수 있습니다.`);return;} setLimitNotice(""); setExtraConditions(prev=>[...prev,{id:nextConditionId,source:"Boron",energy:"",dose:""}]); setNextConditionId(id=>id+1); };
@@ -207,7 +204,6 @@ export default function Home() {
   };
   const toggleSecond=(enabled:boolean)=>{setUseSecond(enabled);setImplant2(enabled?{source:"Boron",energy:"70",dose:"1.5E13"}:{source:"",energy:"",dose:""});};
   const applyPreset=(preset:(typeof PRESETS)[number])=>{setImplant1({source:"Boron",energy:String(preset.energy),dose:preset.dose});if(preset.second){setUseSecond(true);setImplant2({source:"Boron",energy:String(preset.second.energy),dose:preset.second.dose});}else{setUseSecond(false);setImplant2({source:"",energy:"",dose:""});}};
-  const implantLabel=applied.map(i=>`${i.source} ${i.energy} keV · ${formatDose(i.dose)}`).join(" + ");
   const totalConditionCount=1+extraConditions.length;
   return <main>
     <header className="app-header"><div className="brand-mark" aria-hidden="true"><span/><i/></div><div><p className="brand-kicker">DRAM DEVICE WORKBENCH</p><h1>BG Cell Implant Simulator</h1></div><div className="baseline-chip"><small>REFERENCE</small><strong>Boron 90 + 70 keV</strong><span>Total dose 3.0E13 cm⁻²</span></div></header>
@@ -240,25 +236,23 @@ export default function Home() {
         </form>
         <div className="preset-area"><span className="eyebrow">QUICK PRESET</span><div className="preset-grid">{PRESETS.map(p=><button key={p.name} type="button" onClick={()=>applyPreset(p)}>{p.name}</button>)}</div><p>Preset 선택 후 <strong>분석 실행</strong>을 눌러 적용합니다.</p></div>
       </aside>
-      <section className="results-panel"><div className="results-title"><div><span className="eyebrow">SIMULATION RESULT</span><h2>기준 조건 대비 예상 결과</h2><p>{implantLabel}</p></div><span className={`confidence ${result.comparable?"high":"low"}`}>{result.comparable?"Boron 기준 비교":"Source 상이 · 낮은 신뢰도"}</span></div>
-        <div className="condition-compare" aria-label="현재 Base 조건과 입력 조건 비교"><article className="condition-card base"><div className="condition-label"><span>BASE</span><strong>현재 기준 조건</strong></div><p>{baselineSummary.recipe}</p><div><span>{baselineSummary.steps}회 Implant</span><b>Total {baselineSummary.totalDose} cm⁻²</b></div></article><div className="compare-symbol" aria-hidden="true">VS</div><article className="condition-card current"><div className="condition-label"><span>INPUT</span><strong>입력 실험 조건</strong></div><p>{currentSummary.recipe}</p><div><span>{currentSummary.steps}회 Implant</span><b>Total {currentSummary.totalDose} cm⁻²</b></div></article></div>
-        <div className="metric-grid"><MetricCard label="Refresh / Retention" value={result.retention} tone={scoreTone("refresh",result.retention)} detail={result.retentionLabel}/><MetricCard label="Cell Tr Leakage" value={result.leakage} tone={scoreTone("leakage",result.leakage)} detail={result.leakageLabel}/><MetricCard label="GIDL" value={result.gidl} tone={scoreTone("gidl",result.gidl)} detail={result.gidlLabel}/><article className="metric-card compact"><div className="ratio-row"><span>Trench bottom</span><strong>{Math.round(result.bottomRatio*100)}%</strong></div><div className="ratio-row"><span>Deep field-stop</span><strong>{Math.round(result.deepRatio*100)}%</strong></div><div className="ratio-row"><span>Profile coverage</span><strong>{Math.round(result.areaRatio*100)}%</strong></div></article></div>
-        {result.btbtRisk&&<div className="risk-banner"><span>!</span><div><strong>고농도 접합 전계 확인 필요</strong><p>Ioff가 감소해도 GIDL, BTBT 또는 TAT leakage가 증가할 수 있습니다.</p></div></div>}
-        {!result.comparable&&<div className="risk-banner neutral"><span>i</span><div><strong>기준 Source와 다릅니다</strong><p>Boron 기준 refresh·leakage 지수는 방향성 참고용으로만 사용하세요.</p></div></div>}
-        <div className="visual-grid"><CellContour baseline={BASELINE} current={applied}/><ProfileChart current={result.profile}/></div>
-        <PerformanceComparison result={result}/>
-        {appliedConditions.length>1&&<section className="multi-condition-section" aria-labelledby="multi-condition-title">
-          <div className="section-heading"><div><span className="eyebrow">MULTI-CONDITION COMPARE</span><h3 id="multi-condition-title">실험 조건별 비교 ({appliedConditions.length}개)</h3></div><p>각 실험 조건을 기준 조건과 개별적으로 비교합니다.</p></div>
-          {appliedConditions.map((implants,index)=>{
-            const conditionResult=results[index];
-            const recipe=implants.map(i=>`${i.source} ${i.energy} keV · ${formatDose(i.dose)}`).join(" + ");
-            return <div className="condition-result-block" key={index}>
-              <div className="condition-result-head"><strong>실험 조건 {index+1}</strong><span>{recipe}</span></div>
-              <CellContour baseline={BASELINE} current={implants} instanceId={`cond-${index}`}/>
-              <PerformanceComparison result={conditionResult}/>
-            </div>;
-          })}
-        </section>}
+      <section className="results-panel"><div className="results-title"><div><span className="eyebrow">SIMULATION RESULT</span><h2>기준 조건 대비 예상 결과</h2><p>기준 조건부터 실험 조건 1, 2, 3 순서로 전체 결과를 이어서 표시합니다.</p></div></div>
+        <div className="condition-result-block baseline-block">
+          <div className="condition-result-head"><strong>기준 조건</strong><span>{baselineSummary.recipe}</span></div>
+          <article className="condition-card base standalone"><div className="condition-label"><span>BASE</span><strong>현재 기준 조건</strong></div><p>{baselineSummary.recipe}</p><div><span>{baselineSummary.steps}회 Implant</span><b>Total {baselineSummary.totalDose} cm⁻²</b></div></article>
+        </div>
+        {appliedConditions.map((implants,index)=>{
+          const conditionResult=results[index];
+          const summary=conditionSummary(implants);
+          return <div className="condition-result-block" key={index}>
+            <div className="condition-result-head"><strong>실험 조건 {index+1}</strong><span>{summary.recipe}</span><span className={`confidence ${conditionResult.comparable?"high":"low"}`}>{conditionResult.comparable?"Boron 기준 비교":"Source 상이 · 낮은 신뢰도"}</span></div>
+            <div className="metric-grid"><MetricCard label="Refresh / Retention" value={conditionResult.retention} tone={scoreTone("refresh",conditionResult.retention)} detail={conditionResult.retentionLabel}/><MetricCard label="Cell Tr Leakage" value={conditionResult.leakage} tone={scoreTone("leakage",conditionResult.leakage)} detail={conditionResult.leakageLabel}/><MetricCard label="GIDL" value={conditionResult.gidl} tone={scoreTone("gidl",conditionResult.gidl)} detail={conditionResult.gidlLabel}/><article className="metric-card compact"><div className="ratio-row"><span>Trench bottom</span><strong>{Math.round(conditionResult.bottomRatio*100)}%</strong></div><div className="ratio-row"><span>Deep field-stop</span><strong>{Math.round(conditionResult.deepRatio*100)}%</strong></div><div className="ratio-row"><span>Profile coverage</span><strong>{Math.round(conditionResult.areaRatio*100)}%</strong></div></article></div>
+            {conditionResult.btbtRisk&&<div className="risk-banner"><span>!</span><div><strong>고농도 접합 전계 확인 필요</strong><p>Ioff가 감소해도 GIDL, BTBT 또는 TAT leakage가 증가할 수 있습니다.</p></div></div>}
+            {!conditionResult.comparable&&<div className="risk-banner neutral"><span>i</span><div><strong>기준 Source와 다릅니다</strong><p>Boron 기준 refresh·leakage 지수는 방향성 참고용으로만 사용하세요.</p></div></div>}
+            <div className="visual-grid"><CellContour baseline={BASELINE} current={implants} instanceId={`cond-${index}`}/><ProfileChart current={conditionResult.profile}/></div>
+            <PerformanceComparison result={conditionResult}/>
+          </div>;
+        })}
         <div className="method-note"><strong>모델 범위</strong><p>Gaussian projected-range proxy로 dose profile을 계산하고, trench bottom·deep region 농도를 기준 조건과 비교해 Refresh, Cell Tr Leakage 및 GIDL 상대지수를 추정합니다. Anneal diffusion, activation, channeling, tilt, mask screening, Vth, DIBL, BTBT 전계해석은 포함하지 않습니다.</p></div>
       </section>
     </section>
