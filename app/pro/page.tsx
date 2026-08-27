@@ -44,8 +44,12 @@ function ContourSvg({ implants, idPrefix, label }: { implants: Implant[]; idPref
       {implants.map((implant, index) => {
         const { rp } = boronRpSigma(implant.energy);
         const cy = 52 + (rp / 0.58) * 234;
-        const opacity = clamp(implant.dose / 2.6e13, 0.48, 1);
-        return <g key={index}><ellipse cx="320" cy={cy} rx="184" ry="72" fill={`url(#${doseId})`} opacity={opacity} filter={`url(#${glowId})`}/><line x1="468" x2="566" y1={cy} y2={cy} stroke={index===0?"#e04f2c":"#008fb0"} strokeWidth="2" strokeDasharray="5 5"/><text x="570" y={cy+4} fontSize="12" fill="#28424f" textAnchor="end">{`${implant.energy} keV peak`}</text></g>;
+        const doseRatio = implant.dose / 2.6e13;
+        const opacity = clamp(0.42 + 0.30 * doseRatio, 0.42, 1);
+        const sizeScale = clamp(0.82 + 0.22 * doseRatio, 0.8, 1.35);
+        const rx = 184 * sizeScale, ry = 72 * sizeScale;
+        const coreScale = clamp(0.34 + 0.24 * doseRatio, 0.3, 0.62);
+        return <g key={index}><ellipse cx="320" cy={cy} rx={rx} ry={ry} fill={`url(#${doseId})`} opacity={opacity} filter={`url(#${glowId})`}/><ellipse cx="320" cy={cy} rx={rx*coreScale} ry={ry*coreScale} fill="#ef3f23" opacity={clamp(0.35+0.35*doseRatio,0.35,0.85)}/><line x1="468" x2="566" y1={cy} y2={cy} stroke={index===0?"#e04f2c":"#008fb0"} strokeWidth="2" strokeDasharray="5 5"/><text x="570" y={cy+4} fontSize="12" fill="#28424f" textAnchor="end">{`${implant.energy} keV peak`}</text></g>;
       })}
       <rect x="275" y="52" width="90" height="150" fill="#11c7d4" stroke="#006f79" strokeWidth="2"/><rect x="282" y="52" width="76" height="75" fill="#9e2a22" stroke="#fff" strokeWidth="2"/><rect x="282" y="127" width="76" height="68" rx="5" fill="#c59319" stroke="#fff" strokeWidth="2"/>
       <text x="320" y="93" textAnchor="middle" fill="#fff" fontWeight="700" fontSize="15">Poly 750 Å</text><text x="320" y="168" textAnchor="middle" fill="#1a252b" fontWeight="800" fontSize="15">W 750 Å</text><text x="74" y="80" fill="#41545e" fontWeight="700" fontSize="15">Silicon Active</text>
