@@ -26,7 +26,7 @@ const KANE_A = 9.66e18; // Kane BTBT 모델 계수 A, V^2 s^-1 cm^-1 (실리콘 
 const KANE_B = 2.14e7; // Kane BTBT 모델 계수 B, V/cm
 const EG = 1.12; // 실리콘 밴드갭 @300K, eV
 
-function boronRpSigma(energyKeV: number) {
+export function boronRpSigma(energyKeV: number) {
   const rp = 0.003 * energyKeV + 0.01;
   const sigma = Math.max(0.00075 * energyKeV + 0.0125, 0.004);
   return { rp, sigma };
