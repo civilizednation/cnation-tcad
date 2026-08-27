@@ -112,18 +112,28 @@ function ProfileChart({ current }: { current: ReturnType<typeof buildProfile> })
   );
 }
 
-function CellContour({ implants }: { implants: ActiveImplant[] }) {
+function ContourSvg({ implants, idPrefix, label }: { implants: ActiveImplant[]; idPrefix: string; label: string }) {
+  const glowId = `softGlow-${idPrefix}`, doseId = `doseWarm-${idPrefix}`, siliconId = `silicon-${idPrefix}`;
+  return (
+    <svg viewBox="0 0 640 330" role="img" aria-label={`${label} 조건의 buried gate cell transistor implant 농도 분포`}>
+      <defs><filter id={glowId} x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="13"/></filter><radialGradient id={doseId}><stop offset="0%" stopColor="#ef3f23" stopOpacity=".94"/><stop offset="36%" stopColor="#ffc43d" stopOpacity=".9"/><stop offset="62%" stopColor="#29d5a4" stopOpacity=".74"/><stop offset="100%" stopColor="#1f70ff" stopOpacity="0"/></radialGradient><linearGradient id={siliconId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d9e2e7"/><stop offset="100%" stopColor="#aab7bf"/></linearGradient></defs>
+      <rect x="48" y="52" width="544" height="234" rx="8" fill={`url(#${siliconId})`} />
+      {implants.map((implant,index) => { const model=SOURCE_MODEL[implant.source]??SOURCE_MODEL.Boron; const cy=52+(model.rp(implant.energy)/.58)*234; const opacity=clamp(implant.dose/2.6e13,.48,1); return <g key={`${implant.source}-${implant.energy}-${index}`}><ellipse cx="320" cy={cy} rx="184" ry="72" fill={`url(#${doseId})`} opacity={opacity} filter={`url(#${glowId})`}/><line x1="468" x2="566" y1={cy} y2={cy} stroke={index===0?"#e04f2c":"#008fb0"} strokeWidth="2" strokeDasharray="5 5"/><text x="570" y={cy+4} fontSize="12" fill="#28424f" textAnchor="end">{`${implant.energy} keV peak`}</text></g>; })}
+      <rect x="275" y="52" width="90" height="150" fill="#11c7d4" stroke="#006f79" strokeWidth="2"/><rect x="282" y="52" width="76" height="75" fill="#9e2a22" stroke="#fff" strokeWidth="2"/><rect x="282" y="127" width="76" height="68" rx="5" fill="#c59319" stroke="#fff" strokeWidth="2"/>
+      <text x="320" y="93" textAnchor="middle" fill="#fff" fontWeight="700" fontSize="15">Poly 750 Å</text><text x="320" y="168" textAnchor="middle" fill="#1a252b" fontWeight="800" fontSize="15">W 750 Å</text><text x="74" y="80" fill="#41545e" fontWeight="700" fontSize="15">Silicon Active</text>
+      <line x1="250" x2="250" y1="52" y2="202" stroke="#26343b" strokeWidth="2"/><path d="M243 59 L250 52 L257 59 M243 195 L250 202 L257 195" fill="none" stroke="#26343b" strokeWidth="2"/><text x="236" y="133" transform="rotate(-90 236 133)" textAnchor="middle" fontSize="13" fill="#26343b" fontWeight="700">1500 Å</text>
+    </svg>
+  );
+}
+
+function CellContour({ baseline, current }: { baseline: ActiveImplant[]; current: ActiveImplant[] }) {
   return (
     <div className="cell-shell">
       <div className="chart-heading"><div><span className="eyebrow">CELL CROSS-SECTION</span><h3>BG 주변 Dose Contour</h3></div><span className="model-pill">W 750 Å + Poly 750 Å</span></div>
-      <svg viewBox="0 0 640 330" role="img" aria-label="하나의 buried gate cell transistor와 implant 농도 분포">
-        <defs><filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="13"/></filter><radialGradient id="doseWarm"><stop offset="0%" stopColor="#ef3f23" stopOpacity=".94"/><stop offset="36%" stopColor="#ffc43d" stopOpacity=".9"/><stop offset="62%" stopColor="#29d5a4" stopOpacity=".74"/><stop offset="100%" stopColor="#1f70ff" stopOpacity="0"/></radialGradient><linearGradient id="silicon" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d9e2e7"/><stop offset="100%" stopColor="#aab7bf"/></linearGradient></defs>
-        <rect x="48" y="52" width="544" height="234" rx="8" fill="url(#silicon)" />
-        {implants.map((implant,index) => { const model=SOURCE_MODEL[implant.source]??SOURCE_MODEL.Boron; const cy=52+(model.rp(implant.energy)/.58)*234; const opacity=clamp(implant.dose/2.6e13,.48,1); return <g key={`${implant.source}-${implant.energy}-${index}`}><ellipse cx="320" cy={cy} rx="184" ry="72" fill="url(#doseWarm)" opacity={opacity} filter="url(#softGlow)"/><line x1="468" x2="566" y1={cy} y2={cy} stroke={index===0?"#e04f2c":"#008fb0"} strokeWidth="2" strokeDasharray="5 5"/><text x="570" y={cy+4} fontSize="12" fill="#28424f" textAnchor="end">{`${implant.energy} keV peak`}</text></g>; })}
-        <rect x="275" y="52" width="90" height="150" fill="#11c7d4" stroke="#006f79" strokeWidth="2"/><rect x="282" y="52" width="76" height="75" fill="#9e2a22" stroke="#fff" strokeWidth="2"/><rect x="282" y="127" width="76" height="68" rx="5" fill="#c59319" stroke="#fff" strokeWidth="2"/>
-        <text x="320" y="93" textAnchor="middle" fill="#fff" fontWeight="700" fontSize="15">Poly 750 Å</text><text x="320" y="168" textAnchor="middle" fill="#1a252b" fontWeight="800" fontSize="15">W 750 Å</text><text x="74" y="80" fill="#41545e" fontWeight="700" fontSize="15">Silicon Active</text>
-        <line x1="250" x2="250" y1="52" y2="202" stroke="#26343b" strokeWidth="2"/><path d="M243 59 L250 52 L257 59 M243 195 L250 202 L257 195" fill="none" stroke="#26343b" strokeWidth="2"/><text x="236" y="133" transform="rotate(-90 236 133)" textAnchor="middle" fontSize="13" fill="#26343b" fontWeight="700">1500 Å</text>
-      </svg>
+      <div className="contour-compare">
+        <div className="contour-pane base"><h4>기준 조건</h4><ContourSvg implants={baseline} idPrefix="base" label="기준" /></div>
+        <div className="contour-pane current"><h4>입력 조건</h4><ContourSvg implants={current} idPrefix="current" label="입력" /></div>
+      </div>
     </div>
   );
 }
@@ -146,26 +156,29 @@ function scoreTone(metric: "refresh" | "leakage" | "gidl", value: number) {
 }
 
 function PerformanceComparison({ result }: { result: ReturnType<typeof analyze> }) {
-  const rows = [
+  const metrics = [
     { key: "refresh" as const, label: "Refresh / Retention", current: result.retention, direction: "높을수록 유리", note: result.retentionLabel },
     { key: "leakage" as const, label: "Cell Tr Leakage", current: result.leakage, direction: "낮을수록 유리", note: result.leakageLabel },
     { key: "gidl" as const, label: "GIDL", current: result.gidl, direction: "낮을수록 유리", note: result.gidlLabel },
   ];
   return <section className="comparison-section" aria-labelledby="comparison-title">
-    <div className="section-heading"><div><span className="eyebrow">BASELINE = 100%</span><h3 id="comparison-title">주요 특성 비교</h3></div><p>입력 조건을 현재 Base 조건 대비 상대 수준으로 표시합니다.</p></div>
-    <div className="comparison-table-wrap"><table className="comparison-table">
-      <thead><tr><th>평가 항목</th><th>판정 방향</th><th>현재 Base</th><th>입력 조건</th><th>기준 대비</th><th>예상 판정</th></tr></thead>
-      <tbody>{rows.map((row) => { const delta=row.current-100; const tone=scoreTone(row.key,row.current); return <tr key={row.key}><th scope="row">{row.label}</th><td className="direction-cell">{row.direction}</td><td><span className="base-score">100%</span></td><td><strong className={`score ${tone}`}>{row.current}%</strong></td><td><span className={`delta ${delta===0?"same":delta>0?"up":"down"}`}>{delta===0?"동일":`${delta>0?"+":""}${delta}%p`}</span></td><td><span className={`judgement ${tone}`}>{row.note}</span></td></tr>; })}</tbody>
+    <div className="section-heading"><div><span className="eyebrow">BASELINE = 100%</span><h3 id="comparison-title">주요 특성 비교</h3></div><p>기준 조건과 입력 조건을 각 특성별로 한눈에 비교합니다.</p></div>
+    <div className="comparison-table-wrap"><table className="comparison-table transposed">
+      <thead><tr><th className="condition-col">조건</th>{metrics.map((metric) => <th key={metric.key}>{metric.label}<small>{metric.direction}</small></th>)}</tr></thead>
+      <tbody>
+        <tr><th scope="row">기준 (Base)</th>{metrics.map((metric) => <td key={metric.key}><span className="base-score">100%</span></td>)}</tr>
+        <tr><th scope="row">입력 조건</th>{metrics.map((metric) => { const delta=metric.current-100; const tone=scoreTone(metric.key,metric.current); return <td key={metric.key}><div className="metric-cell"><strong className={`score ${tone}`}>{metric.current}%</strong><span className={`delta ${delta===0?"same":delta>0?"up":"down"}`}>{delta===0?"동일":`${delta>0?"+":""}${delta}%p`}</span><span className={`judgement ${tone}`}>{metric.note}</span></div></td>; })}</tr>
+      </tbody>
     </table></div>
     <p className="comparison-footnote">Refresh는 높을수록 유리하며, Cell Tr Leakage와 GIDL은 낮을수록 유리합니다. 수치는 Gaussian 기반 간이 모델의 상대 예상값입니다.</p>
   </section>;
 }
 
 export default function Home() {
-  const [implant1,setImplant1]=useState<Implant>({source:"Boron",energy:"90",dose:"1.5E13"});
+  const [implant1,setImplant1]=useState<Implant>({source:"Boron",energy:"80",dose:"2.3E13"});
   const [implant2,setImplant2]=useState<Implant>({source:"",energy:"",dose:""});
   const [useSecond,setUseSecond]=useState(false);
-  const [applied,setApplied]=useState<ActiveImplant[]>([{source:"Boron",energy:90,dose:1.5e13}]);
+  const [applied,setApplied]=useState<ActiveImplant[]>([{source:"Boron",energy:80,dose:2.3e13}]);
   const [error,setError]=useState("");
   const result=useMemo(()=>analyze(applied),[applied]);
   const baselineSummary=conditionSummary(BASELINE);
@@ -192,7 +205,7 @@ export default function Home() {
         <div className="metric-grid"><MetricCard label="Refresh / Retention" value={result.retention} tone={scoreTone("refresh",result.retention)} detail={result.retentionLabel}/><MetricCard label="Cell Tr Leakage" value={result.leakage} tone={scoreTone("leakage",result.leakage)} detail={result.leakageLabel}/><MetricCard label="GIDL" value={result.gidl} tone={scoreTone("gidl",result.gidl)} detail={result.gidlLabel}/><article className="metric-card compact"><div className="ratio-row"><span>Trench bottom</span><strong>{Math.round(result.bottomRatio*100)}%</strong></div><div className="ratio-row"><span>Deep field-stop</span><strong>{Math.round(result.deepRatio*100)}%</strong></div><div className="ratio-row"><span>Profile coverage</span><strong>{Math.round(result.areaRatio*100)}%</strong></div></article></div>
         {result.btbtRisk&&<div className="risk-banner"><span>!</span><div><strong>고농도 접합 전계 확인 필요</strong><p>Ioff가 감소해도 GIDL, BTBT 또는 TAT leakage가 증가할 수 있습니다.</p></div></div>}
         {!result.comparable&&<div className="risk-banner neutral"><span>i</span><div><strong>기준 Source와 다릅니다</strong><p>Boron 기준 refresh·leakage 지수는 방향성 참고용으로만 사용하세요.</p></div></div>}
-        <div className="visual-grid"><CellContour implants={applied}/><ProfileChart current={result.profile}/></div>
+        <div className="visual-grid"><CellContour baseline={BASELINE} current={applied}/><ProfileChart current={result.profile}/></div>
         <PerformanceComparison result={result}/>
         <div className="method-note"><strong>모델 범위</strong><p>Gaussian projected-range proxy로 dose profile을 계산하고, trench bottom·deep region 농도를 기준 조건과 비교해 Refresh, Cell Tr Leakage 및 GIDL 상대지수를 추정합니다. Anneal diffusion, activation, channeling, tilt, mask screening, Vth, DIBL, BTBT 전계해석은 포함하지 않습니다.</p></div>
       </section>
