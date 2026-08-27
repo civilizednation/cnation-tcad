@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { playAddConditionSound, playAnalyzeSound } from "./sound";
 
 type Implant = { source: string; energy: string; dose: string };
 type ActiveImplant = { source: string; energy: number; dose: number };
@@ -19,16 +20,6 @@ const SOURCE_MODEL: Record<string, { label: string; rp: (energy: number) => numb
   Phosphorus: { label: "Phosphorus (P)", rp: (e) => 0.00165 * e + 0.01, sigma: (e) => 0.00055 * e + 0.01 },
   Arsenic: { label: "Arsenic (As)", rp: (e) => 0.001 * e + 0.006, sigma: (e) => 0.00035 * e + 0.008 },
 };
-
-const PRESETS = [
-  { name: "Before", energy: 90, dose: "1.5E13", second: { energy: 70, dose: "1.5E13" } },
-  { name: "Case 1", energy: 80, dose: "2.0E13" },
-  { name: "Case 2", energy: 80, dose: "2.3E13" },
-  { name: "Case 3", energy: 80, dose: "2.6E13" },
-  { name: "Case 4", energy: 90, dose: "2.0E13" },
-  { name: "Case 5", energy: 90, dose: "2.3E13" },
-  { name: "Case 6", energy: 90, dose: "2.6E13" },
-];
 
 const DEPTHS = Array.from({ length: 145 }, (_, index) => (0.58 * index) / 144);
 
@@ -198,14 +189,19 @@ export default function Home() {
   const [limitNotice,setLimitNotice]=useState("");
   const [appliedConditions,setAppliedConditions]=useState<ActiveImplant[][]>([[{source:"Boron",energy:80,dose:2.3e13}]]);
   const [error,setError]=useState("");
+  const [addFlash,setAddFlash]=useState(false);
+  const [analyzeFlash,setAnalyzeFlash]=useState(false);
   const results=useMemo(()=>appliedConditions.map(analyze),[appliedConditions]);
   const baselineSummary=conditionSummary(BASELINE);
   const update=(setter:(value:Implant)=>void,current:Implant,key:keyof Implant,value:string)=>setter({...current,[key]:value});
   const updateExtra=(id:number,key:keyof Implant,value:string)=>setExtraConditions(prev=>prev.map(c=>c.id===id?{...c,[key]:value}:c));
-  const addCondition=()=>{ if(1+extraConditions.length>=MAX_CONDITIONS){setLimitNotice(`실험 조건은 최대 ${MAX_CONDITIONS}개까지 추가할 수 있습니다.`);return;} setLimitNotice(""); setExtraConditions(prev=>[...prev,{id:nextConditionId,source:implant1.source,energy:implant1.energy,dose:implant1.dose}]); setNextConditionId(id=>id+1); };
+  const addCondition=()=>{ playAddConditionSound(); setAddFlash(true); setTimeout(()=>setAddFlash(false),300); if(1+extraConditions.length>=MAX_CONDITIONS){setLimitNotice(`실험 조건은 최대 ${MAX_CONDITIONS}개까지 추가할 수 있습니다.`);return;} setLimitNotice(""); setExtraConditions(prev=>[...prev,{id:nextConditionId,source:implant1.source,energy:implant1.energy,dose:implant1.dose}]); setNextConditionId(id=>id+1); };
   const removeCondition=(id:number)=>{ setExtraConditions(prev=>prev.filter(c=>c.id!==id)); setLimitNotice(""); };
   const submit=(event:FormEvent)=>{
     event.preventDefault();
+    playAnalyzeSound();
+    setAnalyzeFlash(true);
+    setTimeout(()=>setAnalyzeFlash(false),400);
     const primaryCandidates=[implant1,...(useSecond?[implant2]:[])];
     const groups=[primaryCandidates,...extraConditions.map(c=>[c])];
     const parsedGroups=groups.map(group=>group.map(i=>({source:i.source,energy:Number(i.energy),dose:parseDose(i.dose)})));
@@ -215,7 +211,6 @@ export default function Home() {
     setAppliedConditions(parsedGroups);
   };
   const toggleSecond=(enabled:boolean)=>{setUseSecond(enabled);setImplant2(enabled?{source:"Boron",energy:"70",dose:"1.5E13"}:{source:"",energy:"",dose:""});};
-  const applyPreset=(preset:(typeof PRESETS)[number])=>{setImplant1({source:"Boron",energy:String(preset.energy),dose:preset.dose});if(preset.second){setUseSecond(true);setImplant2({source:"Boron",energy:String(preset.second.energy),dose:preset.second.dose});}else{setUseSecond(false);setImplant2({source:"",energy:"",dose:""});}};
   const totalConditionCount=1+extraConditions.length;
   const conditionMeta=appliedConditions.map((implants,index)=>({label:`실험 조건 ${index+1}`,implants,result:results[index],color:CONDITION_COLORS[index%CONDITION_COLORS.length]}));
   const riskConditions=conditionMeta.filter(c=>c.result.btbtRisk);
@@ -243,13 +238,12 @@ export default function Home() {
                 </div>
               </fieldset>
             ))}
-            <button type="button" className="add-condition-button" onClick={addCondition}>+ 실험 조건 추가</button>
+            <button type="button" className={`add-condition-button ${addFlash?"button-flash":""}`} onClick={addCondition} onAnimationEnd={()=>setAddFlash(false)}>+ 실험 조건 추가</button>
             {limitNotice&&<p className="form-error" role="alert">{limitNotice}</p>}
           </div>
 
-          {error&&<p className="form-error" role="alert">{error}</p>}<button className="analyze-button" type="submit"><span>분석 실행</span><i aria-hidden="true">→</i></button>
+          {error&&<p className="form-error" role="alert">{error}</p>}<button className={`analyze-button ${analyzeFlash?"button-flash":""}`} type="submit" onAnimationEnd={()=>setAnalyzeFlash(false)}><span>분석 실행</span><i aria-hidden="true">→</i></button>
         </form>
-        <div className="preset-area"><span className="eyebrow">QUICK PRESET</span><div className="preset-grid">{PRESETS.map(p=><button key={p.name} type="button" onClick={()=>applyPreset(p)}>{p.name}</button>)}</div><p>Preset 선택 후 <strong>분석 실행</strong>을 눌러 적용합니다.</p></div>
       </aside>
       <section className="results-panel"><div className="results-title"><div><span className="eyebrow">SIMULATION RESULT</span><h2>기준 조건 대비 예상 결과</h2><p>기준 조건과 모든 실험 조건을 그래프·컨투어·표에서 한 번에 비교합니다.</p></div></div>
         <div className="condition-result-block baseline-block">

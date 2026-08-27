@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { BASELINE, analyze, boronRpSigma, buildDopingProfile, solveEquilibriumPotential, type Implant } from "./physics";
+import { playAddConditionSound, playAnalyzeSound } from "../sound";
 
 type Form = { energy: string; dose: string };
 type ExtraCondition = Form & { id: number };
@@ -131,6 +132,8 @@ export default function ProPage() {
   const [limitNotice, setLimitNotice] = useState("");
   const [appliedConditions, setAppliedConditions] = useState<Implant[][]>([[{ energy: 80, dose: 2.3e13 }]]);
   const [error, setError] = useState("");
+  const [addFlash, setAddFlash] = useState(false);
+  const [analyzeFlash, setAnalyzeFlash] = useState(false);
 
   const results = useMemo(() => appliedConditions.map(analyze), [appliedConditions]);
   const conditionMeta = appliedConditions.map((implants, index) => ({
@@ -144,6 +147,9 @@ export default function ProPage() {
   const updateExtra = (id: number, key: keyof Form, value: string) =>
     setExtraConditions((prev) => prev.map((c) => (c.id === id ? { ...c, [key]: value } : c)));
   const addCondition = () => {
+    playAddConditionSound();
+    setAddFlash(true);
+    setTimeout(() => setAddFlash(false), 300);
     if (1 + extraConditions.length >= MAX_CONDITIONS) {
       setLimitNotice(`실험 조건은 최대 ${MAX_CONDITIONS}개까지 추가할 수 있습니다.`);
       return;
@@ -163,6 +169,9 @@ export default function ProPage() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    playAnalyzeSound();
+    setAnalyzeFlash(true);
+    setTimeout(() => setAnalyzeFlash(false), 400);
     const primaryCandidates = [implant1, ...(useSecond ? [implant2] : [])];
     const groups = [primaryCandidates, ...extraConditions.map((c) => [c])];
     const parsedGroups = groups.map((group) => group.map((f) => ({ energy: Number(f.energy), dose: parseDose(f.dose) })));
@@ -217,12 +226,12 @@ export default function ProPage() {
                 </div>
               </fieldset>
             ))}
-            <button type="button" className="add-condition-button" onClick={addCondition}>+ 실험 조건 추가</button>
+            <button type="button" className={`add-condition-button ${addFlash?"button-flash":""}`} onClick={addCondition} onAnimationEnd={()=>setAddFlash(false)}>+ 실험 조건 추가</button>
             {limitNotice && <p className="form-error" role="alert">{limitNotice}</p>}
           </div>
 
           {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="analyze-button" type="submit"><span>물리 엔진 실행</span><i aria-hidden="true">→</i></button>
+          <button className={`analyze-button ${analyzeFlash?"button-flash":""}`} type="submit" onAnimationEnd={()=>setAnalyzeFlash(false)}><span>물리 엔진 실행</span><i aria-hidden="true">→</i></button>
         </form>
         <div className="intro-footer" style={{marginTop:20}}>
           <strong>PRO 모델 범위</strong>
