@@ -287,5 +287,62 @@ export default function ProPage() {
         </div>
       </section>
     </section>
+
+    <section className="app-intro" aria-labelledby="pro-app-intro-title">
+      <h2 id="pro-app-intro-title">Simulation Pro Version 앱 설명</h2>
+
+      <article className="intro-panel">
+        <div className="intro-hero">
+          <span className="eyebrow">PHYSICS ENGINE</span>
+          <h3>PRO 물리 모델은 무엇이 다른가</h3>
+          <p>곡선맞춤 경험식 대신 실제 방정식을 수치해석합니다</p>
+        </div>
+        <div className="intro-callout"><span className="badge">OK</span><div><strong>곡선맞춤이 아닌 실제 방정식 기반 결과</strong><p>기본 버전의 튜닝된 경험식과 달리, PRO는 실험 조건마다 비선형 Poisson 방정식을 새로 풀어 결과를 냅니다.</p></div></div>
+        <div className="intro-block">
+          <h4><span>01</span> 계산 파이프라인 차이</h4>
+          <p>기본 버전은 Gaussian dose profile에서 얻은 깊이별 비율(bottomRatio · deepRatio · areaRatio · peakRatio)을 미리 튜닝해 둔 계수식에 대입해 세 지표를 계산합니다. PRO는 같은 profile을 도핑 농도 Na(x)로 바꾼 뒤, 그 위에서 비선형 Poisson 방정식(Boltzmann 통계)을 Newton-Raphson으로 직접 수치해석해 평형 전위 φ(x)를 구하고, 거기서 나온 장벽 높이 · 접합 전계 같은 물리량으로 세 지표를 유도합니다.</p>
+          <div className="intro-flow">
+            <span>기본 버전<small>Gaussian Profile</small></span><i>›</i>
+            <span>경험식 대입<small>튜닝된 계수</small></span><i>›</i>
+            <span>결과<small>Refresh · Leakage · GIDL</small></span>
+          </div>
+          <div className="intro-flow" style={{marginTop:8}}>
+            <span>PRO 버전<small>Doping Profile Na(x)</small></span><i>›</i>
+            <span>Poisson 수치해석<small>Newton-Raphson</small></span><i>›</i>
+            <span>물리량 추출<small>장벽 · 전계</small></span><i>›</i>
+            <span>결과<small>Refresh · Leakage · GIDL</small></span>
+          </div>
+        </div>
+        <div className="intro-block">
+          <h4><span>02</span> 지표별 유도 방식 비교</h4>
+          <div className="intro-table-wrap">
+            <table className="intro-table">
+              <thead><tr><th>지표</th><th>기본 버전</th><th>PRO 버전</th></tr></thead>
+              <tbody>
+                <tr><td>Refresh / Retention</td><td>fieldStop 비율 기반 경험식</td><td>장벽 높이 → SRH 발생전류 식</td></tr>
+                <tr><td>Cell Tr Leakage</td><td>fieldStop 비율 기반 경험식</td><td>장벽 높이 → 열이온방출(thermionic) 전류식</td></tr>
+                <tr><td>GIDL</td><td>deepRatio · peakRatio 기반 경험식</td><td>1측 급준접합 전계 + Kane band-to-band tunneling 모델</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="intro-footer"><strong>ENGINEERING NOTE</strong><p>PRO는 조건마다 방정식을 실제로 풀기 때문에 계산량이 늘지만, 그리드 241점 · Newton 반복 수 회 수준이라 여전히 브라우저에서 즉시 계산됩니다.</p></div>
+      </article>
+
+      <article className="intro-panel">
+        <div className="intro-hero">
+          <span className="eyebrow">MODEL COMPARISON</span>
+          <h3>기본 버전과 PRO, 언제 무엇을 쓰나</h3>
+          <p>두 모델의 장단점과 쓰임새</p>
+        </div>
+        <div className="intro-cards two-col" style={{margin:"20px clamp(20px,4vw,40px) 0"}}>
+          <div><strong>기본 버전 장점</strong><span>빠른 스크리닝</span><small>계수 대입만으로 즉시 계산 · 여러 조건을 한 번에 훑어보기 좋음</small></div>
+          <div><strong>기본 버전 한계</strong><span>경험식의 한계</span><small>튜닝 범위를 벗어나면 부정확 · 물리적 근거가 약함</small></div>
+          <div><strong>PRO 버전 장점</strong><span>실제 방정식 기반</span><small>장벽 · 전계 같은 물리량을 직접 확인 · GIDL의 지수적 민감도 등 실제 물리 특성이 자연스럽게 나타남</small></div>
+          <div><strong>PRO 버전 한계</strong><span>1D 근사</span><small>배경 도핑 · 발생수명 · 접합 바이어스는 교과서 대표값 · 2D 게이트 형상, 과도상태, 활성화 · 확산 미포함</small></div>
+        </div>
+        <div className="intro-footer"><strong>결론</strong><p>여러 조건을 빠르게 훑어보며 방향을 잡을 때는 기본 버전을, 특정 조건의 물리적 근거(장벽 높이, 접합 전계 등)를 직접 확인하고 싶을 때는 PRO 버전을 사용하세요.</p></div>
+      </article>
+    </section>
   </main>;
 }
