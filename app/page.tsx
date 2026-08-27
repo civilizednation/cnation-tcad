@@ -7,6 +7,7 @@ type ActiveImplant = { source: string; energy: number; dose: number };
 type ExtraCondition = Implant & { id: number };
 
 const MAX_CONDITIONS = 6;
+const CONDITION_COLORS = ["#00a9c7", "#d28b14", "#118c66", "#d44a3b", "#6a5cd6", "#2f6fed"];
 
 const BASELINE: ActiveImplant[] = [
   { source: "Boron", energy: 90, dose: 1.5e13 },
@@ -92,7 +93,7 @@ function analyze(implants: ActiveImplant[]) {
 
 function formatDose(value: number) { return value.toExponential(1).replace("e+", "E").replace("e", "E"); }
 
-function ProfileChart({ current }: { current: ReturnType<typeof buildProfile> }) {
+function ProfileChart({ conditions }: { conditions: { label: string; profile: ReturnType<typeof buildProfile>; color: string }[] }) {
   const width = 760, height = 320, left = 64, right = 22, top = 22, bottom = 48;
   const chartWidth = width - left - right, chartHeight = height - top - bottom;
   const x = (depth: number) => left + (depth / 0.58) * chartWidth;
@@ -100,13 +101,13 @@ function ProfileChart({ current }: { current: ReturnType<typeof buildProfile> })
   const path = (profile: ReturnType<typeof buildProfile>) => profile.map((item, index) => `${index === 0 ? "M" : "L"}${x(item.depth).toFixed(2)},${y(item.value).toFixed(2)}`).join(" ");
   return (
     <div className="chart-shell">
-      <div className="chart-heading"><div><span className="eyebrow">1D PROFILE</span><h3>깊이별 농도 비교</h3></div><div className="chart-legend" aria-label="그래프 범례"><span><i className="line current" />입력 조건</span><span><i className="line baseline" />기준 조건</span></div></div>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="실리콘 깊이에 따른 implant 농도 프로파일">
+      <div className="chart-heading"><div><span className="eyebrow">1D PROFILE</span><h3>깊이별 농도 비교</h3></div><div className="chart-legend" aria-label="그래프 범례"><span><i className="line baseline" />기준 조건</span>{conditions.map((c) => <span key={c.label}><i className="line" style={{background:c.color}} />{c.label}</span>)}</div></div>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="실리콘 깊이에 따른 기준 및 실험 조건별 implant 농도 프로파일">
         <rect x={x(0)} y={top} width={x(0.15) - x(0)} height={chartHeight} rx="8" fill="#dbe7ee" opacity="0.58" />
         {[13,14,15,16,17,18].map((tick) => <g key={tick}><line x1={left} x2={width-right} y1={y(10**tick)} y2={y(10**tick)} stroke="#d8e1e8"/><text x={left-10} y={y(10**tick)+4} textAnchor="end">{`1E${tick}`}</text></g>)}
         {[0,0.1,0.2,0.3,0.4,0.5].map((tick) => <g key={tick}><line x1={x(tick)} x2={x(tick)} y1={top} y2={height-bottom} stroke="#edf1f4"/><text x={x(tick)} y={height-20} textAnchor="middle">{tick.toFixed(1)}</text></g>)}
         <path d={path(baselineProfile)} fill="none" stroke="#738293" strokeWidth="3" strokeDasharray="8 6" />
-        <path d={path(current)} fill="none" stroke="#00a9c7" strokeWidth="4" strokeLinecap="round" />
+        {conditions.map((c) => <path key={c.label} d={path(c.profile)} fill="none" stroke={c.color} strokeWidth="3" strokeLinecap="round" />)}
         <line x1={x(0.15)} x2={x(0.15)} y1={top} y2={height-bottom} stroke="#52636e" strokeDasharray="4 4" />
         <text x={x(0.075)} y={top+18} textAnchor="middle" className="region-label">BG 0–0.15 µm</text>
         <text x={left+chartWidth/2} y={height-2} textAnchor="middle" className="axis-label">Depth below Si surface (µm)</text>
@@ -129,20 +130,21 @@ function ContourSvg({ implants, idPrefix, label }: { implants: ActiveImplant[]; 
   );
 }
 
-function CellContour({ baseline, current, instanceId = "primary" }: { baseline: ActiveImplant[]; current: ActiveImplant[]; instanceId?: string }) {
+function DoseContourSequence({ baseline, conditions }: { baseline: ActiveImplant[]; conditions: { label: string; implants: ActiveImplant[]; color: string }[] }) {
   return (
     <div className="cell-shell">
       <div className="chart-heading"><div><span className="eyebrow">CELL CROSS-SECTION</span><h3>BG 주변 Dose Contour</h3></div><span className="model-pill">W 750 Å + Poly 750 Å</span></div>
-      <div className="contour-compare">
-        <div className="contour-pane base"><h4>기준 조건</h4><ContourSvg implants={baseline} idPrefix={`base-${instanceId}`} label="기준" /></div>
-        <div className="contour-pane current"><h4>입력 조건</h4><ContourSvg implants={current} idPrefix={`current-${instanceId}`} label="입력" /></div>
+      <div className="contour-sequence">
+        <div className="contour-pane base"><h4>기준 조건</h4><ContourSvg implants={baseline} idPrefix="seq-base" label="기준" /></div>
+        {conditions.map((c, index) => (
+          <div className="contour-pane current" key={c.label}>
+            <h4 style={{color:c.color}}>{c.label}</h4>
+            <ContourSvg implants={c.implants} idPrefix={`seq-cond-${index}`} label={c.label} />
+          </div>
+        ))}
       </div>
     </div>
   );
-}
-
-function MetricCard({ label, value, tone, detail }: { label: string; value: number; tone: string; detail: string }) {
-  return <article className={`metric-card ${tone}`}><div className="metric-topline"><span>{label}</span><small>Before = 100</small></div><div className="metric-value">{value}</div><p>{detail}</p><div className="meter"><span style={{width:`${clamp(value/1.35,8,100)}%`}}/></div></article>;
 }
 
 function conditionSummary(implants: ActiveImplant[]) {
@@ -158,19 +160,28 @@ function scoreTone(metric: "refresh" | "leakage" | "gidl", value: number) {
   return value <= 105 ? "good" : value <= 116 ? "caution" : "risk";
 }
 
-function PerformanceComparison({ result }: { result: ReturnType<typeof analyze> }) {
-  const metrics = [
-    { key: "refresh" as const, label: "Refresh / Retention", current: result.retention, direction: "높을수록 유리", note: result.retentionLabel },
-    { key: "leakage" as const, label: "Cell Tr Leakage", current: result.leakage, direction: "낮을수록 유리", note: result.leakageLabel },
-    { key: "gidl" as const, label: "GIDL", current: result.gidl, direction: "낮을수록 유리", note: result.gidlLabel },
-  ];
+const METRICS = [
+  { key: "refresh" as const, label: "Refresh / Retention", direction: "높을수록 유리" },
+  { key: "leakage" as const, label: "Cell Tr Leakage", direction: "낮을수록 유리" },
+  { key: "gidl" as const, label: "GIDL", direction: "낮을수록 유리" },
+];
+
+function metricValue(result: ReturnType<typeof analyze>, key: "refresh" | "leakage" | "gidl") {
+  return key === "refresh" ? result.retention : key === "leakage" ? result.leakage : result.gidl;
+}
+
+function metricNote(result: ReturnType<typeof analyze>, key: "refresh" | "leakage" | "gidl") {
+  return key === "refresh" ? result.retentionLabel : key === "leakage" ? result.leakageLabel : result.gidlLabel;
+}
+
+function PerformanceComparison({ conditions }: { conditions: { label: string; result: ReturnType<typeof analyze> }[] }) {
   return <section className="comparison-section" aria-labelledby="comparison-title">
-    <div className="section-heading"><div><span className="eyebrow">BASELINE = 100%</span><h3 id="comparison-title">주요 특성 비교</h3></div><p>기준 조건과 입력 조건을 각 특성별로 한눈에 비교합니다.</p></div>
+    <div className="section-heading"><div><span className="eyebrow">BASELINE = 100%</span><h3 id="comparison-title">주요 특성 비교</h3></div><p>기준 조건과 모든 실험 조건을 각 특성별로 한눈에 비교합니다.</p></div>
     <div className="comparison-table-wrap"><table className="comparison-table transposed">
-      <thead><tr><th className="condition-col">조건</th>{metrics.map((metric) => <th key={metric.key}>{metric.label}<small>{metric.direction}</small></th>)}</tr></thead>
+      <thead><tr><th className="condition-col">조건</th>{METRICS.map((metric) => <th key={metric.key}>{metric.label}<small>{metric.direction}</small></th>)}</tr></thead>
       <tbody>
-        <tr><th scope="row">기준 (Base)</th>{metrics.map((metric) => <td key={metric.key}><span className="base-score">100%</span></td>)}</tr>
-        <tr><th scope="row">입력 조건</th>{metrics.map((metric) => { const delta=metric.current-100; const tone=scoreTone(metric.key,metric.current); return <td key={metric.key}><div className="metric-cell"><strong className={`score ${tone}`}>{metric.current}%</strong><span className={`delta ${delta===0?"same":delta>0?"up":"down"}`}>{delta===0?"동일":`${delta>0?"+":""}${delta}%p`}</span><span className={`judgement ${tone}`}>{metric.note}</span></div></td>; })}</tr>
+        <tr><th scope="row">기준 (Base)</th>{METRICS.map((metric) => <td key={metric.key}><span className="base-score">100%</span></td>)}</tr>
+        {conditions.map((condition) => <tr key={condition.label}><th scope="row">{condition.label}</th>{METRICS.map((metric) => { const value=metricValue(condition.result,metric.key); const delta=value-100; const tone=scoreTone(metric.key,value); return <td key={metric.key}><div className="metric-cell"><strong className={`score ${tone}`}>{value}%</strong><span className={`delta ${delta===0?"same":delta>0?"up":"down"}`}>{delta===0?"동일":`${delta>0?"+":""}${delta}%p`}</span><span className={`judgement ${tone}`}>{metricNote(condition.result,metric.key)}</span></div></td>; })}</tr>)}
       </tbody>
     </table></div>
     <p className="comparison-footnote">Refresh는 높을수록 유리하며, Cell Tr Leakage와 GIDL은 낮을수록 유리합니다. 수치는 Gaussian 기반 간이 모델의 상대 예상값입니다.</p>
@@ -205,6 +216,9 @@ export default function Home() {
   const toggleSecond=(enabled:boolean)=>{setUseSecond(enabled);setImplant2(enabled?{source:"Boron",energy:"70",dose:"1.5E13"}:{source:"",energy:"",dose:""});};
   const applyPreset=(preset:(typeof PRESETS)[number])=>{setImplant1({source:"Boron",energy:String(preset.energy),dose:preset.dose});if(preset.second){setUseSecond(true);setImplant2({source:"Boron",energy:String(preset.second.energy),dose:preset.second.dose});}else{setUseSecond(false);setImplant2({source:"",energy:"",dose:""});}};
   const totalConditionCount=1+extraConditions.length;
+  const conditionMeta=appliedConditions.map((implants,index)=>({label:`실험 조건 ${index+1}`,implants,result:results[index],color:CONDITION_COLORS[index%CONDITION_COLORS.length]}));
+  const riskConditions=conditionMeta.filter(c=>c.result.btbtRisk);
+  const mismatchConditions=conditionMeta.filter(c=>!c.result.comparable);
   return <main>
     <header className="app-header"><div className="brand-mark" aria-hidden="true"><span/><i/></div><div><p className="brand-kicker">DRAM DEVICE WORKBENCH</p><h1>BG Cell Implant Simulator</h1></div><div className="baseline-chip"><small>REFERENCE</small><strong>Boron 90 + 70 keV</strong><span>Total dose 3.0E13 cm⁻²</span></div></header>
     <section className="workspace">
@@ -236,23 +250,18 @@ export default function Home() {
         </form>
         <div className="preset-area"><span className="eyebrow">QUICK PRESET</span><div className="preset-grid">{PRESETS.map(p=><button key={p.name} type="button" onClick={()=>applyPreset(p)}>{p.name}</button>)}</div><p>Preset 선택 후 <strong>분석 실행</strong>을 눌러 적용합니다.</p></div>
       </aside>
-      <section className="results-panel"><div className="results-title"><div><span className="eyebrow">SIMULATION RESULT</span><h2>기준 조건 대비 예상 결과</h2><p>기준 조건부터 실험 조건 1, 2, 3 순서로 전체 결과를 이어서 표시합니다.</p></div></div>
+      <section className="results-panel"><div className="results-title"><div><span className="eyebrow">SIMULATION RESULT</span><h2>기준 조건 대비 예상 결과</h2><p>기준 조건과 모든 실험 조건을 그래프·컨투어·표에서 한 번에 비교합니다.</p></div></div>
         <div className="condition-result-block baseline-block">
           <div className="condition-result-head"><strong>기준 조건</strong><span>{baselineSummary.recipe}</span></div>
           <article className="condition-card base standalone"><div className="condition-label"><span>BASE</span><strong>현재 기준 조건</strong></div><p>{baselineSummary.recipe}</p><div><span>{baselineSummary.steps}회 Implant</span><b>Total {baselineSummary.totalDose} cm⁻²</b></div></article>
         </div>
-        {appliedConditions.map((implants,index)=>{
-          const conditionResult=results[index];
-          const summary=conditionSummary(implants);
-          return <div className="condition-result-block" key={index}>
-            <div className="condition-result-head"><strong>실험 조건 {index+1}</strong><span>{summary.recipe}</span><span className={`confidence ${conditionResult.comparable?"high":"low"}`}>{conditionResult.comparable?"Boron 기준 비교":"Source 상이 · 낮은 신뢰도"}</span></div>
-            <div className="metric-grid"><MetricCard label="Refresh / Retention" value={conditionResult.retention} tone={scoreTone("refresh",conditionResult.retention)} detail={conditionResult.retentionLabel}/><MetricCard label="Cell Tr Leakage" value={conditionResult.leakage} tone={scoreTone("leakage",conditionResult.leakage)} detail={conditionResult.leakageLabel}/><MetricCard label="GIDL" value={conditionResult.gidl} tone={scoreTone("gidl",conditionResult.gidl)} detail={conditionResult.gidlLabel}/><article className="metric-card compact"><div className="ratio-row"><span>Trench bottom</span><strong>{Math.round(conditionResult.bottomRatio*100)}%</strong></div><div className="ratio-row"><span>Deep field-stop</span><strong>{Math.round(conditionResult.deepRatio*100)}%</strong></div><div className="ratio-row"><span>Profile coverage</span><strong>{Math.round(conditionResult.areaRatio*100)}%</strong></div></article></div>
-            {conditionResult.btbtRisk&&<div className="risk-banner"><span>!</span><div><strong>고농도 접합 전계 확인 필요</strong><p>Ioff가 감소해도 GIDL, BTBT 또는 TAT leakage가 증가할 수 있습니다.</p></div></div>}
-            {!conditionResult.comparable&&<div className="risk-banner neutral"><span>i</span><div><strong>기준 Source와 다릅니다</strong><p>Boron 기준 refresh·leakage 지수는 방향성 참고용으로만 사용하세요.</p></div></div>}
-            <div className="visual-grid"><CellContour baseline={BASELINE} current={implants} instanceId={`cond-${index}`}/><ProfileChart current={conditionResult.profile}/></div>
-            <PerformanceComparison result={conditionResult}/>
-          </div>;
-        })}
+        {riskConditions.length>0&&<div className="risk-banner"><span>!</span><div><strong>고농도 접합 전계 확인 필요</strong><p>{riskConditions.map(c=>c.label).join(", ")}에서 Ioff가 감소해도 GIDL, BTBT 또는 TAT leakage가 증가할 수 있습니다.</p></div></div>}
+        {mismatchConditions.length>0&&<div className="risk-banner neutral"><span>i</span><div><strong>기준 Source와 다른 조건이 있습니다</strong><p>{mismatchConditions.map(c=>c.label).join(", ")}은 Boron 기준 refresh·leakage 지수가 방향성 참고용입니다.</p></div></div>}
+        <div className="visual-grid">
+          <DoseContourSequence baseline={BASELINE} conditions={conditionMeta.map(c=>({label:c.label,implants:c.implants,color:c.color}))}/>
+          <ProfileChart conditions={conditionMeta.map(c=>({label:c.label,profile:c.result.profile,color:c.color}))}/>
+        </div>
+        <PerformanceComparison conditions={conditionMeta.map(c=>({label:c.label,result:c.result}))}/>
         <div className="method-note"><strong>모델 범위</strong><p>Gaussian projected-range proxy로 dose profile을 계산하고, trench bottom·deep region 농도를 기준 조건과 비교해 Refresh, Cell Tr Leakage 및 GIDL 상대지수를 추정합니다. Anneal diffusion, activation, channeling, tilt, mask screening, Vth, DIBL, BTBT 전계해석은 포함하지 않습니다.</p></div>
       </section>
     </section>
