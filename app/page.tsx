@@ -201,7 +201,7 @@ export default function Home() {
   const baselineSummary=conditionSummary(BASELINE);
   const update=(setter:(value:Implant)=>void,current:Implant,key:keyof Implant,value:string)=>setter({...current,[key]:value});
   const updateExtra=(id:number,key:keyof Implant,value:string)=>setExtraConditions(prev=>prev.map(c=>c.id===id?{...c,[key]:value}:c));
-  const addCondition=()=>{ if(1+extraConditions.length>=MAX_CONDITIONS){setLimitNotice(`실험 조건은 최대 ${MAX_CONDITIONS}개까지 추가할 수 있습니다.`);return;} setLimitNotice(""); setExtraConditions(prev=>[...prev,{id:nextConditionId,source:"Boron",energy:"",dose:""}]); setNextConditionId(id=>id+1); };
+  const addCondition=()=>{ if(1+extraConditions.length>=MAX_CONDITIONS){setLimitNotice(`실험 조건은 최대 ${MAX_CONDITIONS}개까지 추가할 수 있습니다.`);return;} setLimitNotice(""); setExtraConditions(prev=>[...prev,{id:nextConditionId,source:implant1.source,energy:implant1.energy,dose:implant1.dose}]); setNextConditionId(id=>id+1); };
   const removeCondition=(id:number)=>{ setExtraConditions(prev=>prev.filter(c=>c.id!==id)); setLimitNotice(""); };
   const submit=(event:FormEvent)=>{
     event.preventDefault();
