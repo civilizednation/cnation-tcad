@@ -10,6 +10,22 @@
 .contour-pane h4{margin:0 0 6px;font-size:.68rem;font-weight:800;color:#738293}
 .contour-pane.current h4{color:var(--cyan-dark)}
 .contour-pane svg{display:block;width:100%;height:auto;overflow:visible}
+.condition-index-label{margin:0 0 8px;font-size:.68rem;font-weight:800;letter-spacing:.06em;color:var(--cyan-dark)}
+.extra-conditions{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.extra-conditions-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.condition-count{font-size:.66rem;font-weight:800;color:var(--cyan-dark);background:#e5f7fa;border:1px solid #b6e8ee;border-radius:999px;padding:4px 9px}
+.implant-block.extra{position:relative;margin-top:10px}
+.remove-condition{position:absolute;top:12px;right:12px;width:22px;height:22px;border:0;border-radius:50%;background:#fff0ee;color:#a3372d;font-size:.85rem;line-height:1;display:grid;place-items:center;padding:0}
+.remove-condition:hover{background:#fddbd6}
+.add-condition-button{width:100%;margin-top:10px;padding:11px;border:1px dashed #9fc4cd;border-radius:10px;background:#f3fbfc;color:var(--cyan-dark);font-weight:800;font-size:.74rem}
+.add-condition-button:hover{background:#e7f7fa}
+.multi-condition-section{margin-top:14px;padding:17px;border:1px solid var(--line);border-radius:14px;background:#fbfcfd}
+.condition-result-block{padding-top:18px;margin-top:18px;border-top:1px solid var(--line)}
+.condition-result-block:first-child{padding-top:0;margin-top:0;border-top:0}
+.condition-result-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:10px}
+.condition-result-head strong{font-size:.86rem;color:var(--cyan-dark)}
+.condition-result-head span{color:var(--muted);font-size:.72rem}
+.condition-result-block .cell-shell{margin-bottom:14px}
 .app-intro{max-width:1620px;margin:16px auto 0;padding:40px clamp(18px,3vw,48px) 48px;border-top:1px solid var(--line)}
 .app-intro>h2{margin:0 0 20px;font-size:clamp(1.25rem,2.5vw,1.8rem);letter-spacing:-.03em;color:var(--ink)}
 .intro-panel{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 36px rgba(21,53,68,.08);overflow:hidden;margin-bottom:24px}

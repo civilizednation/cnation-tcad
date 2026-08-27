@@ -4,6 +4,9 @@ import { FormEvent, useMemo, useState } from "react";
 
 type Implant = { source: string; energy: string; dose: string };
 type ActiveImplant = { source: string; energy: number; dose: number };
+type ExtraCondition = Implant & { id: number };
+
+const MAX_CONDITIONS = 6;
 
 const BASELINE: ActiveImplant[] = [
   { source: "Boron", energy: 90, dose: 1.5e13 },
@@ -126,13 +129,13 @@ function ContourSvg({ implants, idPrefix, label }: { implants: ActiveImplant[]; 
   );
 }
 
-function CellContour({ baseline, current }: { baseline: ActiveImplant[]; current: ActiveImplant[] }) {
+function CellContour({ baseline, current, instanceId = "primary" }: { baseline: ActiveImplant[]; current: ActiveImplant[]; instanceId?: string }) {
   return (
     <div className="cell-shell">
       <div className="chart-heading"><div><span className="eyebrow">CELL CROSS-SECTION</span><h3>BG 주변 Dose Contour</h3></div><span className="model-pill">W 750 Å + Poly 750 Å</span></div>
       <div className="contour-compare">
-        <div className="contour-pane base"><h4>기준 조건</h4><ContourSvg implants={baseline} idPrefix="base" label="기준" /></div>
-        <div className="contour-pane current"><h4>입력 조건</h4><ContourSvg implants={current} idPrefix="current" label="입력" /></div>
+        <div className="contour-pane base"><h4>기준 조건</h4><ContourSvg implants={baseline} idPrefix={`base-${instanceId}`} label="기준" /></div>
+        <div className="contour-pane current"><h4>입력 조건</h4><ContourSvg implants={current} idPrefix={`current-${instanceId}`} label="입력" /></div>
       </div>
     </div>
   );
@@ -178,24 +181,61 @@ export default function Home() {
   const [implant1,setImplant1]=useState<Implant>({source:"Boron",energy:"80",dose:"2.3E13"});
   const [implant2,setImplant2]=useState<Implant>({source:"",energy:"",dose:""});
   const [useSecond,setUseSecond]=useState(false);
-  const [applied,setApplied]=useState<ActiveImplant[]>([{source:"Boron",energy:80,dose:2.3e13}]);
+  const [extraConditions,setExtraConditions]=useState<ExtraCondition[]>([]);
+  const [nextConditionId,setNextConditionId]=useState(1);
+  const [limitNotice,setLimitNotice]=useState("");
+  const [appliedConditions,setAppliedConditions]=useState<ActiveImplant[][]>([[{source:"Boron",energy:80,dose:2.3e13}]]);
   const [error,setError]=useState("");
-  const result=useMemo(()=>analyze(applied),[applied]);
+  const results=useMemo(()=>appliedConditions.map(analyze),[appliedConditions]);
+  const applied=appliedConditions[0];
+  const result=results[0];
   const baselineSummary=conditionSummary(BASELINE);
   const currentSummary=conditionSummary(applied);
   const update=(setter:(value:Implant)=>void,current:Implant,key:keyof Implant,value:string)=>setter({...current,[key]:value});
-  const submit=(event:FormEvent)=>{ event.preventDefault(); const candidates=[implant1,...(useSecond?[implant2]:[])]; const parsed=candidates.map(i=>({source:i.source,energy:Number(i.energy),dose:parseDose(i.dose)})); const invalid=parsed.some(i=>!i.source||!Number.isFinite(i.energy)||i.energy<=0||i.energy>500||!Number.isFinite(i.dose)||i.dose<1e10||i.dose>1e16); if(invalid){setError("Source를 선택하고 Energy는 0–500 keV, Dose는 1E10–1E16 범위로 입력해 주세요.");return;} setError("");setApplied(parsed); };
+  const updateExtra=(id:number,key:keyof Implant,value:string)=>setExtraConditions(prev=>prev.map(c=>c.id===id?{...c,[key]:value}:c));
+  const addCondition=()=>{ if(1+extraConditions.length>=MAX_CONDITIONS){setLimitNotice(`실험 조건은 최대 ${MAX_CONDITIONS}개까지 추가할 수 있습니다.`);return;} setLimitNotice(""); setExtraConditions(prev=>[...prev,{id:nextConditionId,source:"Boron",energy:"",dose:""}]); setNextConditionId(id=>id+1); };
+  const removeCondition=(id:number)=>{ setExtraConditions(prev=>prev.filter(c=>c.id!==id)); setLimitNotice(""); };
+  const submit=(event:FormEvent)=>{
+    event.preventDefault();
+    const primaryCandidates=[implant1,...(useSecond?[implant2]:[])];
+    const groups=[primaryCandidates,...extraConditions.map(c=>[c])];
+    const parsedGroups=groups.map(group=>group.map(i=>({source:i.source,energy:Number(i.energy),dose:parseDose(i.dose)})));
+    const invalid=parsedGroups.some(group=>group.some(i=>!i.source||!Number.isFinite(i.energy)||i.energy<=0||i.energy>500||!Number.isFinite(i.dose)||i.dose<1e10||i.dose>1e16));
+    if(invalid){setError("모든 실험 조건에서 Source를 선택하고 Energy는 0–500 keV, Dose는 1E10–1E16 범위로 입력해 주세요.");return;}
+    setError("");
+    setAppliedConditions(parsedGroups);
+  };
   const toggleSecond=(enabled:boolean)=>{setUseSecond(enabled);setImplant2(enabled?{source:"Boron",energy:"70",dose:"1.5E13"}:{source:"",energy:"",dose:""});};
   const applyPreset=(preset:(typeof PRESETS)[number])=>{setImplant1({source:"Boron",energy:String(preset.energy),dose:preset.dose});if(preset.second){setUseSecond(true);setImplant2({source:"Boron",energy:String(preset.second.energy),dose:preset.second.dose});}else{setUseSecond(false);setImplant2({source:"",energy:"",dose:""});}};
   const implantLabel=applied.map(i=>`${i.source} ${i.energy} keV · ${formatDose(i.dose)}`).join(" + ");
+  const totalConditionCount=1+extraConditions.length;
   return <main>
     <header className="app-header"><div className="brand-mark" aria-hidden="true"><span/><i/></div><div><p className="brand-kicker">DRAM DEVICE WORKBENCH</p><h1>BG Cell Implant Simulator</h1></div><div className="baseline-chip"><small>REFERENCE</small><strong>Boron 90 + 70 keV</strong><span>Total dose 3.0E13 cm⁻²</span></div></header>
     <section className="workspace">
       <aside className="control-panel"><div className="panel-title"><div><span className="eyebrow">PROCESS INPUT</span><h2>Implant 조건</h2></div><span className="step-count">{useSecond?"2 steps":"1 step"}</span></div>
         <form onSubmit={submit}>
+          <p className="condition-index-label">실험 조건 1</p>
           <fieldset className="implant-block"><legend><span>01</span> Implant 1 <b>필수</b></legend><div className="field-grid"><label className="field source-field"><span>Source</span><select value={implant1.source} onChange={e=>update(setImplant1,implant1,"source",e.target.value)}>{Object.entries(SOURCE_MODEL).map(([v,m])=><option value={v} key={v}>{m.label}</option>)}</select></label><label className="field"><span>Energy <i>keV</i></span><input inputMode="decimal" value={implant1.energy} onChange={e=>update(setImplant1,implant1,"energy",e.target.value)} aria-label="Implant 1 Energy"/></label><label className="field"><span>Dose <i>cm⁻²</i></span><input value={implant1.dose} onChange={e=>update(setImplant1,implant1,"dose",e.target.value)} aria-label="Implant 1 Dose"/></label></div></fieldset>
           <div className="second-toggle"><div><strong>Implant 2</strong><span>2회 공정일 때만 사용</span></div><label className="switch"><input type="checkbox" checked={useSecond} onChange={e=>toggleSecond(e.target.checked)}/><span aria-hidden="true"/><b>{useSecond?"사용":"미사용"}</b></label></div>
           <fieldset className={`implant-block secondary ${!useSecond?"disabled":""}`} disabled={!useSecond}><legend><span>02</span> Implant 2 <b>선택</b></legend><div className="field-grid"><label className="field source-field"><span>Source</span><select value={implant2.source} onChange={e=>update(setImplant2,implant2,"source",e.target.value)}>{!implant2.source&&<option value="">비워둠</option>}{Object.entries(SOURCE_MODEL).map(([v,m])=><option value={v} key={v}>{m.label}</option>)}</select></label><label className="field"><span>Energy <i>keV</i></span><input inputMode="decimal" value={implant2.energy} onChange={e=>update(setImplant2,implant2,"energy",e.target.value)} aria-label="Implant 2 Energy" placeholder="비워둠"/></label><label className="field"><span>Dose <i>cm⁻²</i></span><input value={implant2.dose} onChange={e=>update(setImplant2,implant2,"dose",e.target.value)} aria-label="Implant 2 Dose" placeholder="비워둠"/></label></div></fieldset>
+
+          <div className="extra-conditions">
+            <div className="extra-conditions-head"><span className="eyebrow">실험 조건 추가</span><span className="condition-count">{totalConditionCount} / {MAX_CONDITIONS}</span></div>
+            {extraConditions.map((cond,idx)=>(
+              <fieldset className="implant-block extra" key={cond.id}>
+                <button type="button" className="remove-condition" onClick={()=>removeCondition(cond.id)} aria-label={`실험 조건 ${idx+2} 삭제`}>×</button>
+                <legend><span>{idx+2}</span> 실험 조건 {idx+2}</legend>
+                <div className="field-grid">
+                  <label className="field source-field"><span>Source</span><select value={cond.source} onChange={e=>updateExtra(cond.id,"source",e.target.value)}>{Object.entries(SOURCE_MODEL).map(([v,m])=><option value={v} key={v}>{m.label}</option>)}</select></label>
+                  <label className="field"><span>Energy <i>keV</i></span><input inputMode="decimal" value={cond.energy} onChange={e=>updateExtra(cond.id,"energy",e.target.value)} aria-label={`실험 조건 ${idx+2} Energy`}/></label>
+                  <label className="field"><span>Dose <i>cm⁻²</i></span><input value={cond.dose} onChange={e=>updateExtra(cond.id,"dose",e.target.value)} aria-label={`실험 조건 ${idx+2} Dose`}/></label>
+                </div>
+              </fieldset>
+            ))}
+            <button type="button" className="add-condition-button" onClick={addCondition}>+ 실험 조건 추가</button>
+            {limitNotice&&<p className="form-error" role="alert">{limitNotice}</p>}
+          </div>
+
           {error&&<p className="form-error" role="alert">{error}</p>}<button className="analyze-button" type="submit"><span>분석 실행</span><i aria-hidden="true">→</i></button>
         </form>
         <div className="preset-area"><span className="eyebrow">QUICK PRESET</span><div className="preset-grid">{PRESETS.map(p=><button key={p.name} type="button" onClick={()=>applyPreset(p)}>{p.name}</button>)}</div><p>Preset 선택 후 <strong>분석 실행</strong>을 눌러 적용합니다.</p></div>
@@ -207,6 +247,18 @@ export default function Home() {
         {!result.comparable&&<div className="risk-banner neutral"><span>i</span><div><strong>기준 Source와 다릅니다</strong><p>Boron 기준 refresh·leakage 지수는 방향성 참고용으로만 사용하세요.</p></div></div>}
         <div className="visual-grid"><CellContour baseline={BASELINE} current={applied}/><ProfileChart current={result.profile}/></div>
         <PerformanceComparison result={result}/>
+        {appliedConditions.length>1&&<section className="multi-condition-section" aria-labelledby="multi-condition-title">
+          <div className="section-heading"><div><span className="eyebrow">MULTI-CONDITION COMPARE</span><h3 id="multi-condition-title">실험 조건별 비교 ({appliedConditions.length}개)</h3></div><p>각 실험 조건을 기준 조건과 개별적으로 비교합니다.</p></div>
+          {appliedConditions.map((implants,index)=>{
+            const conditionResult=results[index];
+            const recipe=implants.map(i=>`${i.source} ${i.energy} keV · ${formatDose(i.dose)}`).join(" + ");
+            return <div className="condition-result-block" key={index}>
+              <div className="condition-result-head"><strong>실험 조건 {index+1}</strong><span>{recipe}</span></div>
+              <CellContour baseline={BASELINE} current={implants} instanceId={`cond-${index}`}/>
+              <PerformanceComparison result={conditionResult}/>
+            </div>;
+          })}
+        </section>}
         <div className="method-note"><strong>모델 범위</strong><p>Gaussian projected-range proxy로 dose profile을 계산하고, trench bottom·deep region 농도를 기준 조건과 비교해 Refresh, Cell Tr Leakage 및 GIDL 상대지수를 추정합니다. Anneal diffusion, activation, channeling, tilt, mask screening, Vth, DIBL, BTBT 전계해석은 포함하지 않습니다.</p></div>
       </section>
     </section>
