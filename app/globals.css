@@ -10,6 +10,8 @@
 .contour-pane h4{margin:0 0 6px;font-size:.68rem;font-weight:800;color:#738293}
 .contour-pane.current h4{color:var(--cyan-dark)}
 .contour-pane svg{display:block;width:100%;height:auto;overflow:visible}
+.app-explainer{max-width:1620px;margin:0 auto;padding:0 clamp(18px,3vw,48px) 48px;display:grid;gap:20px}
+.app-explainer img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 36px rgba(21,53,68,.08)}
 @media(max-width:880px){.metric-grid{grid-template-columns:1fr 1fr!important}.section-heading{align-items:flex-start;flex-direction:column;gap:5px}}
 @media(max-width:720px){.condition-compare{grid-template-columns:1fr}.compare-symbol{width:auto;height:24px;border:0;background:transparent}.metric-card.compact{grid-column:auto!important}.contour-compare{grid-template-columns:1fr}}
 @media(max-width:480px){.condition-card>div:last-child{display:grid}.metric-grid{grid-template-columns:1fr!important}.comparison-table.transposed{font-size:.64rem}.comparison-table.transposed th,.comparison-table.transposed td{padding:9px 6px}}

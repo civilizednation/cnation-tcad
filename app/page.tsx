@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Image from "next/image";
 
 type Implant = { source: string; energy: string; dose: string };
 type ActiveImplant = { source: string; energy: number; dose: number };
@@ -209,6 +210,10 @@ export default function Home() {
         <PerformanceComparison result={result}/>
         <div className="method-note"><strong>모델 범위</strong><p>Gaussian projected-range proxy로 dose profile을 계산하고, trench bottom·deep region 농도를 기준 조건과 비교해 Refresh, Cell Tr Leakage 및 GIDL 상대지수를 추정합니다. Anneal diffusion, activation, channeling, tilt, mask screening, Vth, DIBL, BTBT 전계해석은 포함하지 않습니다.</p></div>
       </section>
+    </section>
+    <section className="app-explainer" aria-label="앱 설명">
+      <Image src="/app-model-overview.webp" alt="물리 기반 모델로 비교하는 Implant 공정 영향 설명" width={756} height={1344} />
+      <Image src="/app-architecture.webp" alt="애플리케이션 구성과 계산 모델의 역할 설명" width={756} height={1344} />
     </section>
   </main>;
 }
