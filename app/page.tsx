@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import Image from "next/image";
 
 type Implant = { source: string; energy: string; dose: string };
 type ActiveImplant = { source: string; energy: number; dose: number };
@@ -211,9 +210,81 @@ export default function Home() {
         <div className="method-note"><strong>모델 범위</strong><p>Gaussian projected-range proxy로 dose profile을 계산하고, trench bottom·deep region 농도를 기준 조건과 비교해 Refresh, Cell Tr Leakage 및 GIDL 상대지수를 추정합니다. Anneal diffusion, activation, channeling, tilt, mask screening, Vth, DIBL, BTBT 전계해석은 포함하지 않습니다.</p></div>
       </section>
     </section>
-    <section className="app-explainer" aria-label="앱 설명">
-      <Image src="/app-model-overview.webp" alt="물리 기반 모델로 비교하는 Implant 공정 영향 설명" width={756} height={1344} />
-      <Image src="/app-architecture.webp" alt="애플리케이션 구성과 계산 모델의 역할 설명" width={756} height={1344} />
+    <section className="app-intro" aria-labelledby="app-intro-title">
+      <h2 id="app-intro-title">Simulation App 소개</h2>
+
+      <article className="intro-panel">
+        <div className="intro-hero">
+          <span className="eyebrow">DRAM DEVICE · IMPLANT SCREENING</span>
+          <h3>물리 기반 모델로 비교하는 Implant 공정 영향</h3>
+          <p>Dose Profile부터 Refresh · Leakage · GIDL까지</p>
+        </div>
+        <div className="intro-callout"><span className="badge">OK</span><div><strong>임의 수치가 아닌 Physics-informed 상대평가</strong><p>검증된 물리 개념으로 실험 후보의 우선순위를 선별합니다.</p></div></div>
+        <div className="intro-block">
+          <h4><span>01</span> 모델 사용 목적</h4>
+          <p>다수의 Implant 조건을 동일한 기준으로 빠르게 비교해 상세 TCAD와 Wafer DOE 이전에 유망 조건을 선별합니다. 현재 Base 조건을 100%로 정규화하여 변화 방향을 일관되게 보여줍니다.</p>
+          <div className="intro-flow">
+            <span>공정 조건 입력<small>Source · Energy · Dose</small></span><i>›</i>
+            <span>물리 기반 계산<small>Profile · Region index</small></span><i>›</i>
+            <span>상대 특성 비교<small>Base = 100%</small></span>
+          </div>
+        </div>
+        <div className="intro-block">
+          <h4><span>02</span> Dose Profile 계산 근거</h4>
+          <p>이온주입 해석에서 널리 쓰이는 Projected Range(Rp)와 Range Straggle(sigma)을 적용하고, 깊이 방향 농도를 Gaussian analytical profile로 계산합니다.</p>
+          <div className="intro-formula">C(x) = Q / [√(2π) · σ] · exp[-(x-Rp)² / (2σ²)]<small>Q: Implant Dose · x: Silicon depth · 2회 Implant는 두 Profile 중첩</small></div>
+        </div>
+        <div className="intro-block">
+          <h4><span>03</span> Device 특성 평가 방법</h4>
+          <p>Peak 하나가 아니라 Dual BG 구조의 핵심 영역을 분리해 비교합니다.</p>
+          <div className="intro-cards">
+            <div><strong>Trench Bottom</strong><span>BG 하단 전계와 Channel 제어</span></div>
+            <div><strong>Deep Field-stop</strong><span>깊은 Punch-through 경로 억제</span></div>
+            <div><strong>Profile Coverage</strong><span>주요 구간의 전체 농도 확보</span></div>
+            <div><strong>Peak Concentration</strong><span>고농도 접합 전계 위험 감시</span></div>
+          </div>
+          <div className="intro-metric-tags">
+            <span className="good">Refresh<small>높을수록 유리 · BASE 대비 상대지수</small></span>
+            <span className="caution">Cell Tr Leakage<small>낮을수록 유리 · BASE 대비 상대지수</small></span>
+            <span className="risk">GIDL<small>낮을수록 유리 · BASE 대비 상대지수</small></span>
+          </div>
+        </div>
+        <div className="intro-footer"><strong>ENGINEERING SCREENING TOOL</strong><p>상용 TCAD를 대체하는 절대값 예측이 아니라 상세해석과 실험 범위를 줄이기 위한 물리 기반 사전평가 모델입니다.</p></div>
+      </article>
+
+      <article className="intro-panel">
+        <div className="intro-hero">
+          <span className="eyebrow">APPLICATION ARCHITECTURE</span>
+          <h3>애플리케이션 구성과 계산 모델의 역할</h3>
+          <p>입력부터 계산·시각화·배포까지 하나의 일관된 흐름</p>
+        </div>
+        <div className="intro-core"><span>CORE ENGINE</span><strong>app/page.tsx</strong><p>Implant 입력 · Profile 계산 · Base 정규화 · 특성 평가 · 결과 시각화</p></div>
+        <div className="intro-cards two-col">
+          <div><strong>BASELINE</strong><span>현재 기준 조건</span><small>90 + 70 keV, Base 100%</small></div>
+          <div><strong>SOURCE_MODEL</strong><span>이온종별 분포</span><small>Rp와 sigma 산출</small></div>
+          <div><strong>concentration()</strong><span>깊이별 농도</span><small>Gaussian Profile 계산</small></div>
+          <div><strong>buildProfile()</strong><span>Profile 중첩</span><small>1회 또는 2회 Implant</small></div>
+          <div><strong>analyze()</strong><span>특성 상대평가</span><small>Refresh · Leakage · GIDL</small></div>
+          <div><strong>Chart · Contour · Table</strong><span>결과 시각화</span><small>그래프 · 단면 · 비교표</small></div>
+        </div>
+        <div className="intro-table-wrap">
+          <table className="intro-table">
+            <thead><tr><th>파일</th><th>주요 기능</th></tr></thead>
+            <tbody>
+              <tr><td>app/page.tsx</td><td>계산 모델, 입력 UI, Profile과 성능 비교</td></tr>
+              <tr><td>app/globals.css</td><td>카드·그래프·테이블과 모바일 디자인</td></tr>
+              <tr><td>app/layout.tsx</td><td>제목, 설명, 언어와 공유 메타데이터</td></tr>
+              <tr><td>package.json</td><td>실행환경과 빌드 명령 정의</td></tr>
+              <tr><td>vite.config.ts</td><td>개발·배포용 빌드 환경 설정</td></tr>
+              <tr><td>.openai/hosting.json</td><td>배포 프로젝트 연결정보 관리</td></tr>
+              <tr><td>public/*</td><td>아이콘과 링크 공유용 대표 이미지</td></tr>
+              <tr><td>scripts/build-verified.sh</td><td>배포 전 정상 빌드 여부 검증</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="intro-flow"><span>조건 입력</span><i>›</i><span>Profile 계산</span><i>›</i><span>Base 정규화</span><i>›</i><span>특성 평가</span><i>›</i><span>시각화</span></div>
+        <div className="intro-footer"><strong>동일 입력 · 동일 계산 · 동일 결과</strong><p>계산 로직과 화면 표현을 분리해 재현성과 유지보수성을 확보합니다.</p></div>
+      </article>
     </section>
   </main>;
 }
