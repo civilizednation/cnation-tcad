@@ -79,10 +79,11 @@ function analyze(implants: ActiveImplant[]) {
   const peakRatio = Math.max(...profile.map((item) => item.value)) / baselineStats.peak;
   const fieldStop = 0.25 * clamp(bottomRatio, 0.25, 1.45) + 0.3 * clamp(deepRatio, 0.25, 1.45) + 0.45 * clamp(areaRatio, 0.25, 1.45);
   const largestSingleDose = Math.max(...implants.map((implant) => implant.dose));
-  const highDosePenalty = Math.max(0, largestSingleDose / 2.3e13 - 1) * 8;
-  const retention = Math.round(clamp(100 * (0.58 + 0.42 * fieldStop) - highDosePenalty, 68, 118));
-  const leakage = Math.round(clamp(100 / (0.4 + 0.6 * fieldStop) + Math.max(0, peakRatio - 1) * 12 + highDosePenalty * 0.45, 72, 148));
-  const gidl = Math.round(clamp(100 * (0.56 + 0.44 / clamp(deepRatio, 0.45, 1.45)) + Math.max(0, peakRatio - 1) * 17 + highDosePenalty * 0.7, 72, 155));
+  const doseOver = Math.max(0, largestSingleDose / 2.3e13 - 1);
+  const peakOver = Math.max(0, peakRatio - 1);
+  const retention = Math.round(clamp(100 * (0.58 + 0.42 * fieldStop) - peakOver * 60 - doseOver * 45, 68, 118));
+  const leakage = Math.round(clamp(100 / (0.4 + 0.6 * fieldStop) + peakOver * 12 + doseOver * 3.6, 72, 148));
+  const gidl = Math.round(clamp(100 * (0.56 + 0.44 / clamp(deepRatio, 0.45, 1.45)) + peakOver * 90 + doseOver * 70, 72, 155));
   const comparable = implants.every((implant) => implant.source === "Boron");
   const btbtRisk = largestSingleDose >= 2.6e13 || peakRatio > 1.06;
   const retentionLabel = retention < 91 ? "저하 예상" : retention < 98 ? "소폭 저하 가능" : retention <= 103 ? "기준과 유사" : "개선 가능";
